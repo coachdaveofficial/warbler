@@ -4,7 +4,7 @@ from flask import Flask, render_template, request, flash, redirect, session, g
 from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
 
-from forms import UserAddForm, LoginForm, MessageForm
+from forms import UserAddForm, LoginForm, MessageForm, UserEditForm
 from models import db, connect_db, User, Message
 
 CURR_USER_KEY = "curr_user"
@@ -17,7 +17,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = (
     os.environ.get('DATABASE_URL', 'postgresql:///warbler'))
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_ECHO'] = False
+app.config['SQLALCHEMY_ECHO'] = True
 app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = True
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', "it's a secret")
 toolbar = DebugToolbarExtension(app)
@@ -143,6 +143,8 @@ def list_users():
 def users_show(user_id):
     """Show user profile."""
 
+    
+
     user = User.query.get_or_404(user_id)
 
     # snagging messages in order from the database;
@@ -215,6 +217,31 @@ def profile():
     """Update profile for current user."""
 
     # IMPLEMENT THIS
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
+    
+    form = UserEditForm(obj=g.user)
+
+    if not form.validate_on_submit():
+        return render_template('users/edit.html', form=form)
+
+    if not User.authenticate(form.username.data, form.password.data):
+        flash("Invalid credentials.", 'danger')
+        return redirect('/users/profile')
+    
+    g.user.username = form.username.data
+    g.user.email = form.email.data
+    g.user.image_url = form.image_url.data
+    g.user.header_image_url = form.header_image_url.data
+    g.user.bio = form.bio.data
+
+    db.session.commit()
+
+    flash("Successfully edited your profile!", "success")
+    return redirect(f"/users/{g.user.id}")
+
+    
 
 
 @app.route('/users/delete', methods=["POST"])
