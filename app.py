@@ -155,7 +155,13 @@ def users_show(user_id):
                 .order_by(Message.timestamp.desc())
                 .limit(100)
                 .all())
-    return render_template('users/show.html', user=user, messages=messages)
+
+    likes = (Likes
+            .query
+            .filter_by(user_id=user.id)
+            .all())
+
+    return render_template('users/show.html', user=user, messages=messages, likes=likes)
 
 
 @app.route('/users/<int:user_id>/following')
@@ -278,6 +284,21 @@ def add_like(message_id):
     flash("Thanks for the like!", "success")
 
     return redirect('/')
+
+@app.route('/users/<int:user_id>/likes')
+def show_users_likes(user_id):
+
+    user = User.query.get_or_404
+
+    likes = (Likes
+            .query
+            .filter_by(user_id=user_id)
+            .all())
+    likes_ids = [like.message_id for like in likes]
+
+    messages = (Message.query.filter(Message.id.in_(likes_ids)).all())
+    
+    return render_template('users/show.html', messages=messages, user=user)
 
 
 
