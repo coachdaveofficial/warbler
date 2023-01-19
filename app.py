@@ -17,7 +17,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = (
     os.environ.get('DATABASE_URL', 'postgresql:///warbler'))
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_ECHO'] = True
+app.config['SQLALCHEMY_ECHO'] = False
 app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = True
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', "it's a secret")
 toolbar = DebugToolbarExtension(app)
@@ -285,6 +285,20 @@ def add_like(message_id):
 
     return redirect('/')
 
+@app.route('/users/remove_like/<int:message_id>', methods=["GET"])
+def remove_like(message_id):
+    if not g.user:
+        flash("You must be logged in to unlike posts.", "danger")
+        return redirect("/")
+    already_liked = Likes.query.filter_by(message_id=message_id, user_id=g.user.id).first()
+    if already_liked:
+        flash("You have unliked this post", "danger")
+        db.session.delete(already_liked)
+        db.session.commit()
+        return redirect('/')
+    
+    
+
 @app.route('/users/<int:user_id>/likes')
 def show_users_likes(user_id):
 
@@ -298,7 +312,7 @@ def show_users_likes(user_id):
 
     messages = (Message.query.filter(Message.id.in_(likes_ids)).all())
     
-    return render_template('users/show.html', messages=messages, user=user)
+    return render_template('users/likes.html', user=user, messages=messages)
 
 
 
