@@ -92,7 +92,7 @@ class UserModelTestCase(TestCase):
         self.assertEqual(Message.query.count(), 1)
 
 
-        # unsure why this isn't working?
+
         db.session.delete(u)
         db.session.commit()
 
@@ -110,6 +110,50 @@ class UserModelTestCase(TestCase):
         except:
             db.session.rollback()
             self.assertEqual(Message.query.count(), 0)
+        
+    def test_msg_timestamp(self):
+        """Is a timestamp added to each message?"""
+
+        u = User(
+            email="test@test.com",
+            username="testuser",
+            password="HASHED_PASSWORD"
+        )
+
+        db.session.add(u)
+        db.session.commit()
+
+        msg = Message(text="Hello World", user_id=u.id)
+
+        db.session.add(msg)
+        db.session.commit()
+
+        self.assertIsInstance(msg.timestamp, datetime)
+
+    def test_required_columns(self):
+        """Does message get created when required (not nullable) coluns are null"""
+        u = User(
+                email="test@test.com",
+                username="testuser",
+                password="HASHED_PASSWORD"
+            )
+
+        db.session.add(u)
+        db.session.commit()
+
+        self.assertEqual(Message.query.count(), 0)
+
+        try:
+            msg = Message(text=None, user_id=u.id)
+        except: 
+            db.session.rollback()
+            self.assertEqual(Message.query.count(), 0)
+        try:
+            msg = Message(text="no user id", user_id=None)
+        except: 
+            db.session.rollback()
+            self.assertEqual(Message.query.count(), 0)
+
 
 
 
