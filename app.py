@@ -225,16 +225,18 @@ def stop_following(follow_id):
 def profile():
     """Update profile for current user."""
 
-    # IMPLEMENT THIS
+    # if not logged in
     if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
     
     form = UserEditForm(obj=g.user)
 
+    # if form not submitted
     if not form.validate_on_submit():
         return render_template('users/edit.html', form=form)
 
+    # if username or password incorrect
     if not User.authenticate(form.username.data, form.password.data):
         flash("Invalid credentials.", 'danger')
         return redirect('/users/profile')
@@ -274,12 +276,6 @@ def add_like(message_id):
     if not g.user:
         flash("You must be logged in to like posts.", "danger")
         return redirect("/")
-    already_liked = Likes.query.filter_by(message_id=message_id).first()
-    if already_liked:
-        flash("You have unliked this post", "danger")
-        db.session.delete(already_liked)
-        db.session.commit()
-        return redirect('/')
     
     like = Likes(user_id=g.user.id, message_id=message_id)
     db.session.add(like)
