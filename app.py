@@ -332,14 +332,17 @@ def messages_add():
 
     form = MessageForm()
 
-    if form.validate_on_submit():
-        msg = Message(text=form.text.data)
-        g.user.messages.append(msg)
-        db.session.commit()
+    if not form.validate_on_submit():
+        return render_template('messages/new.html', form=form)
+    
+    
+    msg = Message(text=form.text.data)
+    g.user.messages.append(msg)
+    db.session.commit()
 
-        return redirect(f"/users/{g.user.id}")
+    return redirect(f"/users/{g.user.id}")
 
-    return render_template('messages/new.html', form=form)
+    
 
 
 @app.route('/messages/<int:message_id>', methods=["GET"])
@@ -377,23 +380,25 @@ def homepage():
     - logged in: 100 most recent messages of followed_users
     """
     
-    if g.user:
-        following_ids = [follow.id for follow in g.user.following] + [g.user.id]
-
-        messages = (Message
-                    .query
-                    .filter(Message.user_id.in_(following_ids))
-                    .order_by(Message.timestamp.desc())
-                    .limit(100)
-                    .all())
-        likes = [Likes.query.filter_by(user_id=g.user.id).all()]
-
-
-
-        return render_template('home.html', messages=messages, likes=likes)
-
-    else:
+    if not g.user:
         return render_template('home-anon.html')
+        
+    
+    following_ids = [follow.id for follow in g.user.following] + [g.user.id]
+
+    messages = (Message
+                .query
+                .filter(Message.user_id.in_(following_ids))
+                .order_by(Message.timestamp.desc())
+                .limit(100)
+                .all())
+    likes = [Likes.query.filter_by(user_id=g.user.id).all()]
+
+
+
+    return render_template('home.html', messages=messages, likes=likes)
+
+   
 
 
 ##############################################################################
