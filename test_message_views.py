@@ -52,7 +52,7 @@ class MessageViewTestCase(TestCase):
         db.session.commit()
 
     def test_add_message(self):
-        """Can use add a message?"""
+        """Can user add a message?"""
 
         # Since we need to change the session to mimic logging in,
         # we need to use the changing-session trick:
@@ -71,3 +71,107 @@ class MessageViewTestCase(TestCase):
 
             msg = Message.query.one()
             self.assertEqual(msg.text, "Hello")
+        
+    def test_delete_message(self):
+        """Can user delete a message?"""
+        with self.client as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.testuser.id
+
+            c.post("/messages/new", data={"text": "Hello"})
+
+            msg = Message.query.first()
+
+            resp = c.post(f"/messages/{msg.id}/delete")
+
+            # Make sure it redirects
+            self.assertEqual(resp.status_code, 302)
+
+            self.assertEqual(Message.query.count(), 0)
+
+    def test_add_when_not_logged_in(self):
+        """Can message be added when not logged in?"""
+
+        # intentionally not including session_transaction()
+        with self.client as c:
+            resp = c.post("/messages/new", data={"text": "Hello"})
+
+           
+
+            # Make sure it redirects
+            self.assertEqual(resp.status_code, 302)
+
+            self.assertEqual(Message.query.count(), 0)
+
+    def test_delete_when_not_logged_in(self):
+        """Can message be deleted when not logged in?"""
+
+        msg = Message(text="delete me", user_id=self.testuser.id)
+        db.session.add(msg)
+        db.session.commit()
+
+        with self.client as c:
+        
+            self.assertEqual(Message.query.count(), 1)
+
+            resp = c.post(f"/messages/{msg.id}/delete", follow_redirects=True)
+
+
+            self.assertEqual(resp.status_code, 200)
+
+            self.assertEqual(Message.query.count(), 1)
+    def test_show_msg(self):
+        """Does the message page render and display the message?"""
+
+        msg = Message(text="show this message", user_id=self.testuser.id)
+        db.session.add(msg)
+        db.session.commit()
+        with self.client as c:
+            resp = c.get(f"/messages/{msg.id}")
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("show this message", html)
+            self.assertIn("testuser", html)
+
+    def test_delete_message_for_another_user(self):
+        """Can a user delete another user's message?"""
+
+        user2 = User(
+            email="user2@test.com",
+            username="user2",
+            password="HASHED_PASSWORD"
+        )
+        db.session.add(user2)
+        db.session.commit()
+
+        # msg = Message(text="try to delete this msg", user_id=user2.id)
+        # db.session.add(msg)
+        # db.session.commit()
+
+        
+
+        with self.client as c:
+                with c.session_transaction() as sess:
+                    sess[CURR_USER_KEY] = self.testuser.id
+
+                msg = Message(text="try to delete this msg", user_id=user2.id)
+                db.session.add(msg)
+                db.session.commit()
+        
+                self.assertEqual(Message.query.count(), 1)
+
+                resp = c.post(f"/messages/{msg.id}/delete", follow_redirects=True)
+
+                self.assertEqual(resp.status_code, 200)
+
+                self.assertEqual(Message.query.count(), 1)
+
+
+
+    
+
+
+
+        
+
